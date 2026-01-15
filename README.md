@@ -19,6 +19,9 @@ This script solves common Windows Update problems that prevent devices from rece
 
 This release includes three scripts to manage Windows Update readiness:
 
+- **Windows-Updates-Readiness_v2.1.ps1**  
+  Unified Platform Script combining detection and remediation capabilities with options to run detection only (`-DetectOnly`), enable aggressive cleanup (`-AggressiveCleanup`), or skip hardware eligibility checks (`-SkipHardwareCheck`). Designed as a Platform Script in Intune running as SYSTEM.
+  
 - **Windows-Updates-Readiness-Detection_v2.1.ps1**  
   Detection-only script that checks all readiness factors including registry/policy compliance, hardware eligibility for Windows 11, disk space, cleanup opportunities, Windows Update component health, and update pause states.  
   Returns exit code 1 if issues are detected, 0 if compliant. Designed for use as an Intune Proactive Remediation Detection script.
@@ -26,9 +29,6 @@ This release includes three scripts to manage Windows Update readiness:
 - **Windows-Updates-Readiness-Remediation_v2.1.ps1**  
   Remediation-only script that fixes all issues detected by the Detection script. It remediates registry/policy settings, cleans up disk space (Recycle Bin, Temp, WU Cache, Delivery Optimization Cache, etc.), repairs Windows Update components, resets Winsock/proxy, clears update pause states, and triggers Windows Update scan/download/install.  
   Supports an `-AggressiveCleanup` switch to remove Windows.old and perform DISM ResetBase cleanup. Designed for use as an Intune Proactive Remediation Remediation script.
-
-- **Windows-Updates-Readiness_v2.1.ps1**  
-  Unified script combining detection and remediation capabilities with options to run detection only (`-DetectOnly`), enable aggressive cleanup (`-AggressiveCleanup`), or skip hardware eligibility checks (`-SkipHardwareCheck`). Designed as a Platform Script in Intune running as SYSTEM.
 
 ---
 
