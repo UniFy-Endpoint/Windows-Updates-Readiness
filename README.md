@@ -160,7 +160,7 @@ To configure script behavior for Intune deployment, you must **modify the script
 - **Script:** `Windows-Updates-Readiness-Remediation_v2.1.ps1`
 - **Parameters:** `-AggressiveCleanup` (optional)
 - **Configuration for Intune:**  
-  Before uploading to Intune, edit the script and set the default value for the `-AggressiveCleanup` parameter in the param block:
+  Before uploading to Intune, edit the script and set the desired value for the `-AggressiveCleanup` parameter in the param block. Default value in the param block, is set to `$false`
 
   ```powershell
   param(
