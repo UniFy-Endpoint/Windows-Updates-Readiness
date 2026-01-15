@@ -19,9 +19,6 @@ This script solves common Windows Update problems that prevent devices from rece
 
 This release includes three scripts to manage Windows Update readiness:
 
-- **Windows-Updates-Readiness_v2.1.ps1**  
-  Unified Platform Script combining detection and remediation capabilities with options to run detection only (`-DetectOnly`), enable aggressive cleanup (`-AggressiveCleanup`), or skip hardware eligibility checks (`-SkipHardwareCheck`). Designed as a Platform Script in Intune running as SYSTEM.
-  
 - **Windows-Updates-Readiness-Detection_v2.1.ps1**  
   Detection-only script that checks all readiness factors including registry/policy compliance, hardware eligibility for Windows 11, disk space, cleanup opportunities, Windows Update component health, and update pause states.  
   Returns exit code 1 if issues are detected, 0 if compliant. Designed for use as an Intune Proactive Remediation Detection script.
@@ -30,6 +27,9 @@ This release includes three scripts to manage Windows Update readiness:
   Remediation-only script that fixes all issues detected by the Detection script. It remediates registry/policy settings, cleans up disk space (Recycle Bin, Temp, WU Cache, Delivery Optimization Cache, etc.), repairs Windows Update components, resets Winsock/proxy, clears update pause states, and triggers Windows Update scan/download/install.  
   Supports an `-AggressiveCleanup` switch to remove Windows.old and perform DISM ResetBase cleanup. Designed for use as an Intune Proactive Remediation Remediation script.
 
+- **Windows-Updates-Readiness_v2.1.ps1**  
+  Unified script combining detection and remediation capabilities with options to run detection only (`-DetectOnly`), enable aggressive cleanup (`-AggressiveCleanup`), or skip hardware eligibility checks (`-SkipHardwareCheck`). Designed as a Platform Script in Intune running as SYSTEM.
+
 ---
 
 ## Features
@@ -37,7 +37,7 @@ This release includes three scripts to manage Windows Update readiness:
 ## What It Checks & Fixes
 
 | Category | Detection | Remediation |
-|:---------|:----------|:------------|
+|:----|:----|:----|
 | `NoAutoUpdate` | Detects if set to 1 | Resets to 0 |
 | `UseWUServer` | Detects WSUS configuration | Removes WSUS settings |
 | `DisableDualScan` | Detects dual scan block | Resets to 0 |
@@ -75,7 +75,7 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 ### Standard Cleanup
 
 | Location | Description | Path |
-|:---------|:------------|:-----|
+|:----|:----|:----|
 | **Recycle Bin** | Deleted files from all drives | `$Recycle.Bin` on all drives |
 | **User Temp Folder** | Temporary files older than 1 day | `%TEMP%` |
 | **System Temp Folder** | System temporary files older than 1 day | `%SystemRoot%\Temp` |
@@ -90,7 +90,7 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 ### Aggressive Cleanup (with `-AggressiveCleanup` flag)
 
 | Location | Description | Path |
-|:---------|:------------|:-----|
+|:----|:----|:----|
 | **Windows.old** | Previous Windows installation | `%SystemDrive%\Windows.old` |
 | **DISM ResetBase** | All superseded components (no rollback) | Runs `DISM /Online /Cleanup-Image /StartComponentCleanup /ResetBase` |
 
@@ -103,7 +103,7 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 ## Parameters
 
 | Parameter | Type | Description |
-|:----------|:-----|:------------|
+|:----|:----|:----|
 | `-DetectOnly` | Switch | Run in detection-only mode without remediation or making changes |
 | `-AggressiveCleanup` | Switch | Enable aggressive disk cleanup including Windows.old (removes rollback capability) |
 | `-SkipHardwareCheck` | Switch | Skip Windows 11 hardware eligibility checks |
@@ -116,6 +116,7 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 ```
 
 - Exit code `0` means compliant, `1` means issues detected.
+- **Note:** This script does not have parameters - it always runs in detection-only mode.
 
 ### Remediation Script
 
@@ -135,25 +136,67 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 
 ## Intune Deployment
 
+### Important Note on Parameters in Intune
+
+**Intune does not support passing parameters to scripts.** When uploading scripts to Intune (either as Platform Scripts or Proactive Remediation), you can only browse and upload the script file itself - you cannot specify parameters like `-DetectOnly`, `-AggressiveCleanup`, or `-SkipHardwareCheck`.
+
+To configure script behavior for Intune deployment, you must **modify the script file before uploading** to set the desired default parameter values.
+
+---
+
 ### Proactive Remediation
 
-- Use **Windows-Updates-Readiness-Detection_v2.1.ps1** as the Detection script.
-- Use **Windows-Updates-Readiness-Remediation_v2.1.ps1** as the Remediation script.
+#### Detection Script
+- **Script:** `Windows-Updates-Readiness-Detection_v2.1.ps1`
+- **Parameters:** None - this script always runs in detection-only mode
+- **Exit Codes:** 
+  - `1` = Non-compliant (issues found)
+  - `0` = Compliant
 
-```powershell
-# Exit code 1 = Non-compliant (issues found)
-# Exit code 0 = Compliant
-```
+#### Remediation Script
+- **Script:** `Windows-Updates-Readiness-Remediation_v2.1.ps1`
+- **Parameters:** `-AggressiveCleanup` (optional)
+- **Configuration for Intune:**  
+  Before uploading to Intune, edit the script and set the default value for the `-AggressiveCleanup` parameter in the param block:
+
+  ```powershell
+  param(
+      [Parameter(Mandatory=$false)]
+      [switch]$AggressiveCleanup = $false  # Set to $true to enable aggressive cleanup
+  )
+  ```
+
+  Then upload the modified script to Intune.
+
+---
 
 ### Platform Script
 
-- Use **Windows-Updates-Readiness_v2.1.ps1** as a Platform Script running as SYSTEM.
+- **Script:** `Windows-Updates-Readiness_v2.1.ps1`
+- **Parameters:** `-DetectOnly`, `-AggressiveCleanup`, `-SkipHardwareCheck`
+- **Configuration for Intune:**  
+  Before uploading to Intune, edit the script and set the desired default values in the param block:
+
+  ```powershell
+  param(
+      [Parameter(Mandatory=$false)]
+      [switch]$DetectOnly = $false,        # Set to $true for detection-only mode
+      [Parameter(Mandatory=$false)]
+      [switch]$AggressiveCleanup = $false,  # Set to $true to enable aggressive cleanup
+      [Parameter(Mandatory=$false)]
+      [switch]$SkipHardwareCheck = $false   # Set to $true to skip hardware checks
+  )
+  ```
+
+  Then upload the modified script to Intune.
+
+#### Deployment Steps
 1. Go to **Microsoft Intune admin center**
 2. Navigate to **Devices** > **Scripts and remediations** > **Platform scripts**
 3. Click **+ Add** > **Windows 10 and later**
 4. Configure:
    - **Name:** Windows Updates Readiness
-   - **Script:** Upload `Windows-Updates-Readiness_v1.5.ps1`
+   - **Script:** Upload `Windows-Updates-Readiness_v2.1.ps1` (with your configured defaults)
    - **Run this script using the logged on credentials:** No
    - **Enforce script signature check:** No
    - **Run script in 64 bit PowerShell Host:** Yes
