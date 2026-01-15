@@ -87,7 +87,8 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 | **DISM Component Cleanup** | Superseded Windows components | Runs `DISM /Online /Cleanup-Image /StartComponentCleanup` |
 
 
-### Aggressive Cleanup (with `-AggressiveCleanup` flag)
+
+### Aggressive Disk Cleanup
 
 | Location | Description | Path |
 |:----|:----|:----|
@@ -99,6 +100,8 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 ---
 
 ## Usage
+
+### Only when manually run as Local Admin on a device 
 
 ## Parameters
 
@@ -167,6 +170,18 @@ To configure script behavior for Intune deployment, you must **modify the script
   ```
 
   Then upload the modified script to Intune.
+
+#### Deployment Steps
+1. Go to **Microsoft Intune admin center**
+2. Navigate to **Devices** > **Scripts and remediations**
+3. Click **Create**
+4. Configure:
+   - **Name:** Windows Updates Readiness
+   - **Script:** Upload `Windows-Updates-Readiness-Detection_v2.1.ps1` and `Windows-Updates-Readiness-Remediation_v2.1.ps1`
+   - **Run this script using the logged on credentials:** No
+   - **Enforce script signature check:** No
+   - **Run script in 64 bit PowerShell Host:** Yes
+5. Assign to device groups
 
 ---
 
