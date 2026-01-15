@@ -1,6 +1,8 @@
-# Windows Updates Readiness Script
+# Windows Updates Readiness Scripts v2.1
 
-A comprehensive PowerShell script designed to detect and remediate Windows Update configuration issues, ensuring devices are ready to receive updates via Microsoft Intune and Windows Update for Business (WUfB).
+A comprehensive set of PowerShell scripts designed to detect and remediate Windows Update configuration issues, ensuring devices are ready to receive updates via Microsoft Intune and Windows Update for Business (WUfB).
+
+---
 
 ## Purpose
 
@@ -11,20 +13,26 @@ This script solves common Windows Update problems that prevent devices from rece
 - Legacy registry settings are blocking Windows Update
 - Devices have paused updates or insufficient disk space
 
+---
+
+## Overview
+
+This release includes three scripts to manage Windows Update readiness:
+
+- **Windows-Updates-Readiness-Detection_v2.1.ps1**  
+  Detection-only script that checks all readiness factors including registry/policy compliance, hardware eligibility for Windows 11, disk space, cleanup opportunities, Windows Update component health, and update pause states.  
+  Returns exit code 1 if issues are detected, 0 if compliant. Designed for use as an Intune Proactive Remediation Detection script.
+
+- **Windows-Updates-Readiness-Remediation_v2.1.ps1**  
+  Remediation-only script that fixes all issues detected by the Detection script. It remediates registry/policy settings, cleans up disk space (Recycle Bin, Temp, WU Cache, Delivery Optimization Cache, etc.), repairs Windows Update components, resets Winsock/proxy, clears update pause states, and triggers Windows Update scan/download/install.  
+  Supports an `-AggressiveCleanup` switch to remove Windows.old and perform DISM ResetBase cleanup. Designed for use as an Intune Proactive Remediation Remediation script.
+
+- **Windows-Updates-Readiness_v2.1.ps1**  
+  Unified script combining detection and remediation capabilities with options to run detection only (`-DetectOnly`), enable aggressive cleanup (`-AggressiveCleanup`), or skip hardware eligibility checks (`-SkipHardwareCheck`). Designed as a Platform Script in Intune running as SYSTEM.
+
+---
+
 ## Features
-
-### Detection & Reporting
-- **OS Detection** - Accurately identifies Windows 10 vs Windows 11 based on build number
-- **Hardware Eligibility** - Validates TPM 2.0, Secure Boot, and RAM requirements for Windows 11
-- **Disk Space Analysis** - Checks free space and Recycle Bin size (30GB+ recommended for upgrades)
-- **Policy Audit** - Detects WSUS conflicts, update pauses, and misconfigured registry settings
-
-### Remediation
-- **Registry Cleanup** - Removes legacy WSUS/GPO settings that block WUfB
-- **Pause State Clearing** - Removes all update pause flags
-- **Windows Update Repair** - Re-registers DLLs, resets Winsock, restarts services
-- **Disk Cleanup** - Clears temp files, Recycle Bin, WU cache, Delivery Optimization cache
-- **Update Trigger** - Forces Windows Update scan, download, and install
 
 ## What It Checks & Fixes
 
@@ -37,6 +45,28 @@ This script solves common Windows Update problems that prevent devices from rece
 | Update Pause States | Detects all pause flags | Clears all pause keys |
 | Disk Space | Warns if < 30GB free | Runs cleanup routines |
 | TPM/SecureBoot/RAM | Validates Win11 eligibility | Reports blockers |
+
+
+### Detection
+
+- **Hardware Eligibility**: Validates TPM 2.0 presence and enabled state, Secure Boot enabled, and minimum 4GB RAM for Windows 11 eligibility.
+- **Registry/Policy Compliance**: Checks critical Windows Update policies and WSUS-related settings that may block updates.
+- **Update Pause States**: Detects if updates are paused via registry keys.
+- **Disk Space & Cleanup Needs**: Checks free disk space and flags cleanup needs for Recycle Bin, Temp folders, Windows Update cache, Delivery Optimization cache, Windows Error Reporting, Installer patch cache, Thumbnail cache, and WinSxS component store.
+- **Windows Update Component Health**: Verifies critical Windows Update services are running and essential DLLs are present.
+- **Proxy and Winsock Status**: Detects proxy configuration and potential Winsock corruption.
+- **Update History**: Retrieves recent Windows Update installation history.
+
+### Remediation
+
+- **Registry/Policy Fixes**: Resets critical registry keys to recommended values and removes legacy WSUS settings.
+- **Clear Update Pause States**: Removes all update pause flags.
+- **Disk Cleanup**: Cleans Recycle Bin, Temp folders, Windows Update cache, Delivery Optimization cache, Windows Error Reporting files, Installer patch cache, Thumbnail cache, and runs DISM component cleanup.
+- **Aggressive Cleanup**: Optionally removes Windows.old folder and performs DISM ResetBase cleanup (removes rollback capability).
+- **Windows Update Component Repair**: Stops Windows Update services, re-registers essential DLLs, resets Winsock and WinHTTP proxy, and restarts services.
+- **Trigger Windows Update Scan**: Initiates Windows Update scan, download, and install process.
+
+---
 
 ## Disk Cleanup Details
 
@@ -56,6 +86,7 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 | **Thumbnail Cache** | Explorer thumbnail database files | `%LocalAppData%\Microsoft\Windows\Explorer\thumbcache_*.db` |
 | **DISM Component Cleanup** | Superseded Windows components | Runs `DISM /Online /Cleanup-Image /StartComponentCleanup` |
 
+
 ### Aggressive Cleanup (with `-AggressiveCleanup` flag)
 
 | Location | Description | Path |
@@ -65,36 +96,58 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 
 >**Warning:** Aggressive cleanup removes the ability to roll back to the previous Windows version and uninstall updates. Use with caution!
 
+---
+
 ## Usage
 
-### Basic Usage
-
-```powershell
-# Run detection and remediation
-.\Windows-Updates-Readiness_v1.5.ps1
-
-# Detection only (no changes made)
-.\Windows-Updates-Readiness_v1.5.ps1 -DetectOnly
-
-# Include aggressive cleanup (removes Windows.old - no rollback!)
-.\Windows-Updates-Readiness_v1.5.ps1 -AggressiveCleanup
-
-# Skip hardware eligibility check
-.\Windows-Updates-Readiness_v1.5.ps1 -SkipHardwareCheck
-```
-
-### Parameters
+## Parameters
 
 | Parameter | Type | Description |
 |:----------|:-----|:------------|
-| `-DetectOnly` | Switch | Run in detection-only mode without making changes |
+| `-DetectOnly` | Switch | Run in detection-only mode without remediation or making changes |
 | `-AggressiveCleanup` | Switch | Enable aggressive disk cleanup including Windows.old (removes rollback capability) |
 | `-SkipHardwareCheck` | Switch | Skip Windows 11 hardware eligibility checks |
 
+
+### Detection Script
+
+```powershell
+.\Windows-Updates-Readiness-Detection_v2.1.ps1
+```
+
+- Exit code `0` means compliant, `1` means issues detected.
+
+### Remediation Script
+
+```powershell
+.\Windows-Updates-Readiness-Remediation_v2.1.ps1 [-AggressiveCleanup]
+```
+
+- Use `-AggressiveCleanup` to remove Windows.old and perform DISM ResetBase cleanup.
+
+### Unified Script
+
+```powershell
+.\Windows-Updates-Readiness_v2.1.ps1 [-DetectOnly] [-AggressiveCleanup] [-SkipHardwareCheck]
+```
+
+---
+
 ## Intune Deployment
 
-### As a Platform Script
+### Proactive Remediation
 
+- Use **Windows-Updates-Readiness-Detection_v2.1.ps1** as the Detection script.
+- Use **Windows-Updates-Readiness-Remediation_v2.1.ps1** as the Remediation script.
+
+```powershell
+# Exit code 1 = Non-compliant (issues found)
+# Exit code 0 = Compliant
+```
+
+### Platform Script
+
+- Use **Windows-Updates-Readiness_v2.1.ps1** as a Platform Script running as SYSTEM.
 1. Go to **Microsoft Intune admin center**
 2. Navigate to **Devices** > **Scripts and remediations** > **Platform scripts**
 3. Click **+ Add** > **Windows 10 and later**
@@ -106,51 +159,25 @@ When disk space is below 30GB (or when running remediation), the script cleans t
    - **Run script in 64 bit PowerShell Host:** Yes
 5. Assign to device groups
 
-### As a Remediation Script
-
-You can also deploy this as a **Proactive Remediation** by splitting detection and remediation:
-
-**Detection Script:**
-```powershell
-.\Windows-Updates-Readiness_v1.5.ps1 -DetectOnly
-# Exit code 1 = Non-compliant (issues found)
-# Exit code 0 = Compliant
-```
-
-**Remediation Script:**
-```powershell
-.\Windows-Updates-Readiness_v1.5.ps1
-```
+---
 
 ## Logging
 
-All actions are logged to:
-```
-C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\Windows-Updates-Readiness.log
-```
-
-### Sample Log Output
+All scripts log detailed information to:
 
 ```
-[2026-01-13 11:46:46] [INFO] ========================================
-[2026-01-13 11:46:46] [INFO] Windows Updates Readiness Script v1.5
-[2026-01-13 11:46:46] [INFO] Execution Mode: Detection and Remediation
-[2026-01-13 11:46:46] [INFO] ========================================
-[2026-01-13 11:46:46] [INFO] Computer: DESKTOP-ABC123
-[2026-01-13 11:46:46] [INFO] Current OS: Windows 11 Enterprise - 24H2 (Build 26100.7462)
-[2026-01-13 11:46:46] [INFO] RAM: 16 GB | TPM: True (v2.0) | SecureBoot: True
-[2026-01-13 11:46:46] [INFO] Disk space on C: - Free: 45.23 GB / Total: 256 GB
-[2026-01-13 11:46:46] [INFO] Recycle Bin size: 2.5 GB
-[2026-01-13 11:46:46] [WARNING] NoAutoUpdate is set to 1 (should be 0)
-[2026-01-13 11:46:47] [INFO] Starting remediation phase...
-[2026-01-13 11:46:47] [INFO] Clearing Recycle Bin...
-[2026-01-13 11:46:47] [INFO] Recycle Bin cleared successfully
-[2026-01-13 11:46:47] [INFO] Setting registry value to 0...
-[2026-01-13 11:46:48] [INFO] Disk cleanup complete. Space freed: 3.2 GB
-[2026-01-13 11:46:48] [INFO] Remediation successful: All policy issues resolved
+C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\
 ```
 
-## Registry Keys Modified
+- Detection logs: `Windows-Updates-Readiness-Detection.log`
+- Remediation logs: `Windows-Updates-Readiness-Remediation.log`
+- Unified script logs: `Windows-Updates-Readiness.log`
+
+---
+
+## Registry Keys Managed
+
+### Keys Reset to Recommended Values
 
 ### Keys Reset to 0
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU\NoAutoUpdate`
@@ -158,40 +185,44 @@ C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\Windows-Updates-Readines
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\DisableDualScan`
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\DoNotConnectToWindowsUpdateInternetLocations`
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\DisableWindowsUpdateAccess`
-- `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\SetPolicyDrivenUpdateSourceFor*`
+- `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\SetPolicyDrivenUpdateSourceForDriverUpdates`
+- `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\SetPolicyDrivenUpdateSourceForOtherUpdates`
+- `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\SetPolicyDrivenUpdateSourceForQualityUpdates`
+- `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\SetPolicyDrivenUpdateSourceForFeatureUpdates`
 
 ### Keys Set to Specific Values
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU\UseUpdateClassPolicySource` → `1`
 - `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Appraiser\GWX\GStatus` → `2`
 
+
 ### Keys Removed
+
 - `WUServer`
 - `WUStatusServer`
 - `TargetGroup`
 - `TargetGroupEnabled`
 
-### Pause Keys Cleared
+### Update Pause Keys Cleared
+
 - `PausedFeatureDate`, `PausedQualityDate`
 - `PausedFeatureStatus`, `PausedQualityStatus`
 - `PauseFeatureUpdatesStartTime`, `PauseFeatureUpdatesEndTime`
 - `PauseQualityUpdatesStartTime`, `PauseQualityUpdatesEndTime`
 - `PauseUpdatesExpiryTime`, `PauseUpdatesStartTime`
 
+---
+
 ## Windows Update Components Repaired
 
 The script repairs Windows Update by:
 
-1. **Stopping Services:** `wuauserv`, `bits`, `cryptsvc`, `msiserver`, `usosvc`, `dosvc`
+1. **Stops Windows Update related services:** `wuauserv`, `bits`, `cryptsvc`, `msiserver`, `usosvc`, `dosvc`
 2. **Re-registering DLLs:** 36 Windows Update related DLLs including `wuapi.dll`, `wuaueng.dll`, `wups.dll`, etc.
 3. **Resetting Network:** Winsock reset and WinHTTP proxy reset
-4. **Restarting Services:** All stopped services are restarted
+4. **Restarts Windows Update services:** All stopped services are restarted
 
-## Exit Codes
 
-| Code | Meaning |
-|:-----|:--------|
-| `0` | Success - System is compliant or remediation successful |
-| `1` | Issues detected (detection-only) or remediation incomplete |
+---
 
 ## Requirements
 
@@ -200,12 +231,12 @@ The script repairs Windows Update by:
 - **Permissions:** Must run as SYSTEM or Administrator
 - **Disk Space:** 30GB+ free recommended for Windows upgrades
 
-## Support
+---
 
-If you encounter issues or have questions:
-1. Check the log file at `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\Windows-Updates-Readiness.log`
-2. Open an issue on this repository with the log output
+## Contributing
+
+Contributions and feedback are welcome! Please submit issues or pull requests on GitHub.
 
 ---
 
-**Note:** Always test in a non-production environment before deploying to production devices.
+**Note:** Always test scripts in a non-production environment before deploying widely to production devices.
