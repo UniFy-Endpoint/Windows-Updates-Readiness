@@ -19,16 +19,32 @@ This script solves common Windows Update problems that prevent devices from rece
 
 This release includes three scripts to manage Windows Update readiness:
 
-- **Windows-Updates-Readiness-Detection_v2.3.ps1**  
+- **Windows-Updates-Readiness-Detection_v2.5.ps1**  
   Detection-only script that checks all readiness factors including registry/policy compliance, hardware eligibility for Windows 11, disk space, cleanup opportunities, Windows Update component health, and update pause states.  
   Returns exit code 1 if issues are detected, 0 if compliant. Designed for use as an Intune Proactive Remediation Detection script.
 
-- **Windows-Updates-Readiness-Remediation_v2.3.ps1**  
+- **Windows-Updates-Readiness-Remediation_v2.5.ps1**  
   Remediation-only script that fixes all issues detected by the Detection script. It remediates registry/policy settings, cleans up disk space (Recycle Bin, Temp, WU Cache, Delivery Optimization Cache, etc.), repairs Windows Update components, resets Winsock/proxy, clears update pause states, and triggers Windows Update scan/download/install.  
   Supports an `-AggressiveCleanup` switch to remove Windows.old and perform DISM ResetBase cleanup. Designed for use as an Intune Proactive Remediation Remediation script.
 
-- **Windows-Updates-Readiness_v2.3.ps1**  
+- **Windows-Updates-Readiness_v2.5.ps1**  
   Unified script combining detection and remediation capabilities with options to run detection only (`-DetectOnly`), enable aggressive cleanup (`-AggressiveCleanup`), or skip hardware eligibility checks (`-SkipHardwareCheck`). Designed as a Platform Script in Intune running as SYSTEM.
+
+---
+
+## Recent Updates (v2.5)
+
+### WSUS Registry Key Removal
+
+**Enhancement:** Scripts now completely remove legacy WSUS registry keys to ensure clean migration to Windows Update for Business (WUfB).
+
+**Keys Removed:**
+- `WUServer` - Legacy WSUS server URL
+- `WUStatusServer` - Legacy WSUS status server URL
+- `TargetGroup` - WSUS target group assignment
+- `TargetGroupEnabled` - WSUS target group enabled flag
+
+**Impact:** Devices migrating from WSUS/GPO environments to Intune WUfB will have all legacy WSUS configurations completely removed, preventing conflicts and ensuring proper cloud-based update management.
 
 ---
 
@@ -53,9 +69,10 @@ This release includes three scripts to manage Windows Update readiness:
 | Category | Detection | Remediation |
 |:----|:----|:----|
 | `NoAutoUpdate` | Detects if set to 1 | Resets to 0 |
-| `UseWUServer` | Detects WSUS configuration | Removes WSUS settings |
+| `UseWUServer` | Detects WSUS configuration | Resets to 0 and removes WSUS keys |
 | `DisableDualScan` | Detects dual scan block | Resets to 0 |
-| `WUServer/WUStatusServer` | Detects WSUS server URLs | Removes entries |
+| `WUServer/WUStatusServer` | Detects WSUS server URLs | Completely removes keys |
+| `TargetGroup/TargetGroupEnabled` | Detects WSUS target group | Completely removes keys |
 | Update Pause States | Detects all pause flags | Clears all pause keys |
 | Disk Space | Warns if < 30GB free | Runs cleanup routines |
 | TPM/SecureBoot/RAM | Validates Win11 eligibility | Reports blockers |
@@ -74,7 +91,7 @@ This release includes three scripts to manage Windows Update readiness:
 
 ### Remediation
 
-- **Registry/Policy Fixes**: Resets critical registry keys to recommended values and removes legacy WSUS settings.
+- **Registry/Policy Fixes**: Resets critical registry keys to recommended values and completely removes legacy WSUS settings.
 - **Clear Update Pause States**: Removes all update pause flags.
 - **Disk Cleanup**: Cleans Recycle Bin, Temp folders, Windows Update cache, Delivery Optimization cache, Windows Error Reporting files, Installer patch cache, Thumbnail cache, and runs DISM component cleanup.
 - **Aggressive Cleanup**: Optionally removes Windows.old folder and performs DISM ResetBase cleanup (removes rollback capability).
@@ -130,7 +147,7 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 ### Detection Script
 
 ```powershell
-.\Windows-Updates-Readiness-Detection_v2.3.ps1
+.\Windows-Updates-Readiness-Detection_v2.5.ps1
 ```
 
 - Exit code `0` means compliant, `1` means issues detected.
@@ -139,7 +156,7 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 ### Remediation Script
 
 ```powershell
-.\Windows-Updates-Readiness-Remediation_v2.3.ps1 [-AggressiveCleanup]
+.\Windows-Updates-Readiness-Remediation_v2.5.ps1 [-AggressiveCleanup]
 ```
 
 - Use `-AggressiveCleanup` to remove Windows.old and perform DISM ResetBase cleanup.
@@ -147,7 +164,7 @@ When disk space is below 30GB (or when running remediation), the script cleans t
 ### Unified Script
 
 ```powershell
-.\Windows-Updates-Readiness_v2.3.ps1 [-DetectOnly] [-AggressiveCleanup] [-SkipHardwareCheck]
+.\Windows-Updates-Readiness_v2.5.ps1 [-DetectOnly] [-AggressiveCleanup] [-SkipHardwareCheck]
 ```
 
 ---
@@ -165,14 +182,14 @@ To configure script behavior for Intune deployment, you must **modify the script
 ### Proactive Remediation
 
 #### Detection Script
-- **Script:** `Windows-Updates-Readiness-Detection_v2.3.ps1`
+- **Script:** `Windows-Updates-Readiness-Detection_v2.5.ps1`
 - **Parameters:** None - this script always runs in detection-only mode
 - **Exit Codes:** 
   - `1` = Non-compliant (issues found)
   - `0` = Compliant
 
 #### Remediation Script
-- **Script:** `Windows-Updates-Readiness-Remediation_v2.3.ps1`
+- **Script:** `Windows-Updates-Readiness-Remediation_v2.5.ps1`
 - **Parameters:** `-AggressiveCleanup` (optional)
 - **Configuration for Intune:**  
   Before uploading to Intune, edit the script and set the desired value for the `-AggressiveCleanup` parameter in the param block. Default value in the param block, is set to `$false`
@@ -192,7 +209,7 @@ To configure script behavior for Intune deployment, you must **modify the script
 3. Click **Create**
 4. Configure:
    - **Name:** Windows Updates Readiness
-   - **Script:** Upload `Windows-Updates-Readiness-Detection_v2.3.ps1` and `Windows-Updates-Readiness-Remediation_v2.3.ps1`
+   - **Script:** Upload `Windows-Updates-Readiness-Detection_v2.5.ps1` and `Windows-Updates-Readiness-Remediation_v2.5.ps1`
    - **Run this script using the logged on credentials:** No
    - **Enforce script signature check:** No
    - **Run script in 64 bit PowerShell Host:** Yes
@@ -202,7 +219,7 @@ To configure script behavior for Intune deployment, you must **modify the script
 
 ### Platform Script
 
-- **Script:** `Windows-Updates-Readiness_v2.3.ps1`
+- **Script:** `Windows-Updates-Readiness_v2.5.ps1`
 - **Parameters:** `-DetectOnly`, `-AggressiveCleanup`, `-SkipHardwareCheck`
 - **Configuration for Intune:**  
   Before uploading to Intune, edit the script and set the desired default values in the param block:
@@ -226,7 +243,7 @@ To configure script behavior for Intune deployment, you must **modify the script
 3. Click **+ Add** > **Windows 10 and later**
 4. Configure:
    - **Name:** Windows Updates Readiness
-   - **Script:** Upload `Windows-Updates-Readiness_v2.3.ps1` (with your configured defaults)
+   - **Script:** Upload `Windows-Updates-Readiness_v2.5.ps1` (with your configured defaults)
    - **Run this script using the logged on credentials:** No
    - **Enforce script signature check:** No
    - **Run script in 64 bit PowerShell Host:** Yes
@@ -250,9 +267,8 @@ C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\
 
 ## Registry Keys Managed
 
-### Keys Reset to Recommended Values
-
 ### Keys Reset to 0
+
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU\NoAutoUpdate`
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU\UseWUServer`
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\DisableDualScan`
@@ -264,16 +280,20 @@ C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\SetPolicyDrivenUpdateSourceForFeatureUpdates`
 
 ### Keys Set to Specific Values
+
 - `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU\UseUpdateClassPolicySource` → `1`
 - `HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Appraiser\GWX\GStatus` → `2`
 
+### Keys Completely Removed (WSUS Legacy Settings)
 
-### Keys Removed
+The following legacy WSUS registry keys are completely removed to ensure clean migration to Windows Update for Business:
 
-- `WUServer`
-- `WUStatusServer`
-- `TargetGroup`
-- `TargetGroupEnabled`
+- `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\WUServer`
+- `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\WUStatusServer`
+- `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\TargetGroup`
+- `HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\TargetGroupEnabled`
+
+> **Note:** These keys are not set to 0 or blank - they are completely deleted from the registry to prevent any residual WSUS configuration from interfering with cloud-based update management.
 
 ### Update Pause Keys Cleared
 
