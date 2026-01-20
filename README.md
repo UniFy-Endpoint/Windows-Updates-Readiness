@@ -30,9 +30,32 @@ This release includes three scripts to manage Windows Update readiness:
 - **Windows-Updates-Readiness_v2.5.ps1**  
   Unified script combining detection and remediation capabilities with options to run detection only (`-DetectOnly`), enable aggressive cleanup (`-AggressiveCleanup`), or skip hardware eligibility checks (`-SkipHardwareCheck`). Designed as a Platform Script in Intune running as SYSTEM.
 
+
 ---
 
 ## Recent Updates (v2.5)
+
+**Enhancement:** Change recommended cleanup thresholds based on real-world enterprise Windows device management experience.
+
+- Recycle Bin >= 2 GB
+- User Temp/System Folder Folders >= (500 MB combined)
+- Healthy system: >= 200 MB
+- WU Cache >= 500 MB
+- DO Cache >= 500 MB
+- Windows Error Reporting (WER) >= 200 MB
+- Installer Patch Cache >= 500 MB
+- Thumbnail Cache >= 200 MB
+- WinSxS/Component Store >= 8 GB
+
+**Fix Applied to:**
+- `Keep the space in the system healthy and optimized`
+- `Maximize disk space recovery when remediation runs`
+
+**Impact:** The amount and size of the data to be cleaned in the system were not being properly optimized to trigger remediation needs.
+
+---
+
+## Recent Updates (v2.4)
 
 ### WSUS Registry Key Removal
 
@@ -102,7 +125,22 @@ This release includes three scripts to manage Windows Update readiness:
 
 ## Disk Cleanup Details
 
-When disk space is below 30GB (or when running remediation), the script cleans the following locations:
+### These are the recommended cleanup Thresholds based on real-world enterprise Windows device management experience.
+
+| Component | Recommendation | Description | 
+|:----|:----|:----|
+| Recycle Bin | 2 GB | Users typically accumulate 1-5 GB; 2 GB catches most cases without being too aggressive. Recycle Bin grows quickly with deleted downloads, installers, and documents. |
+| Temp Folders (combined) | 500 MB | Temp files rarely need to exceed 500 MB for normal operation. Larger amounts indicate stale files from failed installs or crashed apps. |
+| WU Cache | 500 MB | After updates complete, the download cache should be minimal. >500 MB often means stuck/failed updates or orphaned files. |
+| DO Cache | 500 MB | Delivery Optimization should manage itself, but can accumulate. 500 MB is reasonable as it's often smaller unless heavily used for peer caching. |
+| Win Error Report (WER) | 200 MB | Windows Error reports rarely exceed 200 MB unless there are persistent crash issues. Large WER folders indicate app stability problems worth cleaning. |
+| Installer Cache | 500 MB | Patch cache grows over time with cumulative updates. 500 MB is reasonable; larger amounts are often orphaned patches. |
+| Thumbnail Cache | 200 MB | Thumbnail DBs rarely exceed 200 MB even with heavy media use. Larger sizes indicate corruption or excessive regeneration. |
+| DISM/WinSxS | 8 GB | WinSxS naturally grows to 6-10 GB on healthy systems. 8 GB threshold catches systems that need cleanup without flagging normal systems. On Windows 11, 7-9 GB is typical. |
+| Minimum Free Space | 30 GB | Keep at 30 GB - Feature Updates require 20-25 GB working space, plus buffer for extraction and rollback. |
+
+
+## When disk space is below 30GB (or when running remediation), the script cleans the following locations:
 
 ### Standard Cleanup
 
