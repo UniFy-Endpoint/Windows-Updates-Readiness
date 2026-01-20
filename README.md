@@ -38,7 +38,7 @@ This release includes three scripts to manage Windows Update readiness:
 **Enhancement:** Change recommended cleanup thresholds based on real-world enterprise Windows device management experience.
 
 - Recycle Bin >= 2 GB
-- User Temp/System Folder Folders >= (500 MB combined)
+- User Temp/System Folder Folders >= 500 MB Combined
 - Healthy system: >= 200 MB
 - WU Cache >= 500 MB
 - DO Cache >= 500 MB
