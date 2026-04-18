@@ -1,3 +1,5 @@
+[![Download Latest Release](https://img.shields.io/github/v/release/UniFy-Endpoint/Windows-Updates-Readiness?label=Download%20Latest&style=for-the-badge&logo=github)](https://github.com/UniFy-Endpoint/Windows-Updates-Readiness/releases/latest)
+
 # Windows Updates Readiness Scripts
 
 A comprehensive set of PowerShell scripts designed to detect and remediate Windows Update configuration issues, ensuring devices are ready to receive updates via Microsoft Intune and Windows Update for Business (WUfB).
